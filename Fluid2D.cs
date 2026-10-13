@@ -8,9 +8,11 @@ public partial class Fluid2D : Control
     float restDensity = 0.003f;
     float stiffness = 2;
     float gamma = 7;
+    float g = 1;
 	[Export] int ParticleCount = 100;
 	Vector2[] Positions;
-    //Vector2[] Velocities;
+    Vector2[] Velocities;
+    Vector2[] Accelerations;
     float[] Densities;
     float[] Pressures;
     float mass = 1.0f;
@@ -21,17 +23,21 @@ public partial class Fluid2D : Control
 	public override void _Ready()
 	{
 		Positions = new Vector2[ParticleCount];
+        Velocities = new Vector2[ParticleCount];
+        Accelerations = new Vector2[ParticleCount];
+
         Densities = new float[ParticleCount];
         Pressures = new float[ParticleCount];
         Random r = new Random();
 
         int x = 0;
         int y = 0;
+
 		for (int i = 0; i < ParticleCount; i++)
         {
-			Positions[i] = new Vector2(x * (particleSize * 4) + particleSize / 2, y * (particleSize * 4) + particleSize / 2);
+			Positions[i] = new Vector2(x * (particleSize * 2) + particleSize, y * (particleSize * 2) + particleSize);
             x++;
-            if(x % 40 == 0)
+            if((x * (particleSize * 2) + particleSize) >= Size.X)
             {
                 x = 0;
                 y++;
@@ -42,12 +48,34 @@ public partial class Fluid2D : Control
     }
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
-	public override void _Process(double delta)
+	public override void _PhysicsProcess(double delta)
 	{
 		QueueRedraw();
-
         CalculateDensity();
         CalculatePressure();
+        for (int i = 0; i < ParticleCount; i++)
+        {
+            Accelerations[i] = Vector2.Zero;
+            for(int j = 0; j < ParticleCount; j++)
+            {
+                float dst = Positions[i].DistanceTo(Positions[j]);
+                //think this is supposed to be normalised
+                Vector2 dir = (Positions[i] - Positions[j]).Normalized();
+                float slope = WeightedDensityDerivative(dst, (float)SmoothingRadius.Value);
+                Accelerations[i] += Pressures[i] * dir * slope * mass / Densities[i];
+            }
+        }
+
+        for(int i = 0; i < particleSize; i++)
+        {
+            Velocities[i] += Accelerations[i];
+            Positions[i] += Velocities[i];
+
+            Positions[i].X = Positions[i].X < 0 ? Positions[i].X : 0;
+            Positions[i].Y = Positions[i].Y < 0 ? Positions[i].Y : 0;
+            Positions[i].X = Positions[i].X > Size.X ? Positions[i].X : Size.X;
+            Positions[i].X = Positions[i].Y > Size.Y ? Positions[i].Y : Size.Y;
+        }
     }
 
     public override void _Draw()
@@ -75,6 +103,17 @@ public partial class Fluid2D : Control
         {
             return 0;
         }
+    }
+
+    //shamefully copied off Sebastian Lague
+    //https://www.youtube.com/watch?v=rSKMYc1CQHE&t=622s
+    //We still need to calculate the derivative when we do the 3d version
+    static float WeightedDensityDerivative(float dst, float radius)
+    {
+        if (dst > radius) return 0;
+        float f = dst * dst - radius * radius;
+        float scale = -24 / MathF.PI * MathF.Pow(radius, 8);
+        return scale * dst * f * f;
     }
 
     void CalculateDensity()
