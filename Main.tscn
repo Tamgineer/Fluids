@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://d1f3lp6cuca60"]
+
+[ext_resource type="PackedScene" uid="uid://b8e8q51eoc6l0" path="res://Fluid2D.tscn" id="2_uu6xs"]
+
+[node name="Main" type="Node3D" unique_id=2114341802]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=498698761]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=952301655]
+transform = Transform3D(0.92880946, -0.17823419, 0.3248777, 0, 0.87672657, 0.48098916, -0.3705576, -0.44674727, 0.8143119, 3.5633264, 3.2168534, 5.4494047)
+
+[node name="Fluid2d" parent="." unique_id=432831521 instance=ExtResource("2_uu6xs")]

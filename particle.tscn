@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://ch7npwhvp31xf"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_qa6nv"]
+radius = 0.25
+height = 0.5
+
+[node name="Particle" type="MeshInstance3D" unique_id=299511061]
+mesh = SubResource("SphereMesh_qa6nv")

@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://b8e8q51eoc6l0"]
+
+[ext_resource type="Script" uid="uid://c41323paj2nnp" path="res://Fluid2D.cs" id="1_pfe5e"]
+
+[node name="Fluid2d" type="Control" unique_id=432831521]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_pfe5e")
+ParticleCount = 400
+
+[node name="SRLabel" type="Label" parent="." unique_id=114996058]
+layout_mode = 0
+offset_right = 140.0
+offset_bottom = 23.0
+text = "Smoothing Radius"
+
+[node name="SmoothingRadius" type="HSlider" parent="." unique_id=1733619002]
+layout_mode = 0
+offset_left = 158.0
+offset_right = 460.0
+offset_bottom = 23.0
+min_value = 1.0
+max_value = 200.0
+value = 20.0

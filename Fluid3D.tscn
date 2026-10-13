@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://caq5o63dalifq"]
+
+[ext_resource type="Script" uid="uid://cwf6nkydu7tcd" path="res://Fluid.cs" id="1_t6lng"]
+[ext_resource type="PackedScene" uid="uid://ch7npwhvp31xf" path="res://particle.tscn" id="2_4cvuw"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glv2v"]
+transparency = 1
+albedo_color = Color(0.4618106, 0.7403959, 0.87438434, 0.11372549)
+
+[node name="Pool" type="Node3D" unique_id=639741433 node_paths=PackedStringArray("bounding")]
+script = ExtResource("1_t6lng")
+bounding = NodePath("CSGBox3D")
+ParticleCount = 25
+ParticleMesh = ExtResource("2_4cvuw")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=465221764]
+size = Vector3(7, 3, 5)
+material = SubResource("StandardMaterial3D_glv2v")
