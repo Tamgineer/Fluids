@@ -56,25 +56,45 @@ public partial class Fluid2D : Control
         for (int i = 0; i < ParticleCount; i++)
         {
             Accelerations[i] = Vector2.Zero;
-            for(int j = 0; j < ParticleCount; j++)
+            for (int j = 0; j < ParticleCount; j++)
             {
+                if (i == j) continue;
                 float dst = Positions[i].DistanceTo(Positions[j]);
                 //think this is supposed to be normalised
                 Vector2 dir = (Positions[i] - Positions[j]).Normalized();
-                float slope = WeightedDensityDerivative(dst, (float)SmoothingRadius.Value);
-                Accelerations[i] += Pressures[i] * dir * slope * mass / Densities[i];
+                float slope = -WeightedDensityDerivative(dst, (float)SmoothingRadius.Value);
+                Accelerations[i] += dir * slope;
             }
         }
 
-        for(int i = 0; i < particleSize; i++)
+        for(int i = 0; i < ParticleCount; i++)
         {
-            Velocities[i] += Accelerations[i];
-            Positions[i] += Velocities[i];
+            Velocities[i] += Accelerations[i] * (float)delta;
+            Positions[i] += Velocities[i] * (float)delta;
 
-            Positions[i].X = Positions[i].X < 0 ? Positions[i].X : 0;
-            Positions[i].Y = Positions[i].Y < 0 ? Positions[i].Y : 0;
-            Positions[i].X = Positions[i].X > Size.X ? Positions[i].X : Size.X;
-            Positions[i].X = Positions[i].Y > Size.Y ? Positions[i].Y : Size.Y;
+            if(Positions[i].X <= 0)
+            {
+                Positions[i].X = 0;
+                Velocities[i].X *= -1;
+            }
+
+            if (Positions[i].Y <= 0)
+            {
+                Positions[i].Y = 0;
+                Velocities[i].Y *= -1;
+            }
+
+            if (Positions[i].X >= Size.X)
+            {
+                Positions[i].X = Size.X;
+                Velocities[i].X *= -1;
+            }
+
+            if (Positions[i].Y >= Size.Y)
+            {
+                Positions[i].Y = Size.Y;
+                Velocities[i].Y *= -1;
+            }
         }
     }
 
