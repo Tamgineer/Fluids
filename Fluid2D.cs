@@ -16,6 +16,8 @@ public partial class Fluid2D : Control
     float[] Densities;
     float[] Pressures;
     float mass = 1.0f;
+    //scale is important to make the values not ridiculous
+    float scale = 10;
 
     //nb: h is usually referred to as smoothing radius
     Slider SmoothingRadius;
@@ -36,6 +38,7 @@ public partial class Fluid2D : Control
         for (int i = 0; i < ParticleCount; i++)
         {
             Positions[i] = new Vector2(x * (particleSize * 2) + particleSize, y * (particleSize * 2) + particleSize);
+            Positions[i] *= scale;
             x++;
             if ((x * (particleSize * 2) + particleSize) >= Size.X)
             {
@@ -46,20 +49,6 @@ public partial class Fluid2D : Control
 
         SmoothingRadius = GetNode<Slider>("SmoothingRadius");
 
-        for (int i = 0; i < ParticleCount; i++)
-        {
-            Accelerations[i] = Vector2.Zero;
-            for (int j = 0; j < ParticleCount; j++)
-            {
-                if (i == j) continue;
-                float dst = Positions[i].DistanceTo(Positions[j]);
-                //think this is supposed to be normalised
-                Vector2 dir = (Positions[i] - Positions[j]).Normalized();
-                float slope = CalculatePressureDerivative(WeightedDensityKernel(dst, (float)SmoothingRadius.Value)) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value);
-                Accelerations[i] += -dir * slope;
-            }
-            Debug.Print(Accelerations[i].ToString());
-        }
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -74,10 +63,9 @@ public partial class Fluid2D : Control
             {
                 if (i == j) continue;
                 float dst = Positions[i].DistanceTo(Positions[j]);
-                //think this is supposed to be normalised
                 Vector2 dir = (Positions[i] - Positions[j]).Normalized();
-                float slope = CalculatePressureDerivative(WeightedDensityKernel(dst, (float)SmoothingRadius.Value)) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value);
-                Accelerations[i] += -dir * slope;
+                float slope = CalculatePressureDerivative(Densities[i]) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value * scale);
+                Accelerations[i] += dir * (slope / Densities[i]);
             }
         }
 
@@ -89,25 +77,25 @@ public partial class Fluid2D : Control
             if (Positions[i].X <= 0)
             {
                 Positions[i].X = 0;
-                Velocities[i].X *= -1;
+                Velocities[i].X *= -0.5f;
             }
 
             if (Positions[i].Y <= 0)
             {
                 Positions[i].Y = 0;
-                Velocities[i].Y *= -1;
+                Velocities[i].Y *= -0.5f;
             }
 
-            if (Positions[i].X >= Size.X)
+            if (Positions[i].X >= Size.X * scale)
             {
-                Positions[i].X = Size.X;
-                Velocities[i].X *= -1;
+                Positions[i].X = Size.X * scale;
+                Velocities[i].X *= -0.5f;
             }
 
-            if (Positions[i].Y >= Size.Y)
+            if (Positions[i].Y >= Size.Y * scale)
             {
-                Positions[i].Y = Size.Y;
-                Velocities[i].Y *= -1;
+                Positions[i].Y = Size.Y * scale;
+                Velocities[i].Y *= -0.5f;
             }
         }
     }
@@ -115,10 +103,9 @@ public partial class Fluid2D : Control
     public override void _Draw()
     {
         base._Draw();
-        DrawCircle(GetLocalMousePosition(), (float)SmoothingRadius.Value, Color.FromHsv(0, 0, 0.5f));
         for (int i = 0; i < ParticleCount; i++)
         {
-            DrawCircle(Positions[i], particleSize, Color.FromHsv(280 / 360, 1, (Densities[i] / (float)SmoothingRadius.Value) * 1000));
+            DrawCircle(Positions[i] / scale, particleSize, Color.FromHsv(280 / 360, 1, 1));
         }
 
     }
@@ -149,7 +136,7 @@ public partial class Fluid2D : Control
             for (int j = 0; j < ParticleCount; j++)
             {
                 if (i == j) { continue; }
-                Densities[i] += mass * WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), (float)SmoothingRadius.Value);
+                Densities[i] += WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), (float)SmoothingRadius.Value * scale);
             }
         }
     }

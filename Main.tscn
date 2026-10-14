@@ -12,8 +12,8 @@ shadow_enabled = true
 transform = Transform3D(0.92880946, -0.17823419, 0.3248777, 0, 0.87672657, 0.48098916, -0.3705576, -0.44674727, 0.8143119, 3.5633264, 3.2168534, 5.4494047)
 
 [node name="Fluid2d" parent="." unique_id=432831521 instance=ExtResource("2_uu6xs")]
-offset_left = 247.0
-offset_top = 93.0
-offset_right = -247.0
-offset_bottom = -93.0
-ParticleCount = 100
+offset_left = 226.0
+offset_top = 100.0
+offset_right = -526.0
+offset_bottom = -148.0
+ParticleCount = 300
