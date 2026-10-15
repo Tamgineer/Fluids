@@ -21,6 +21,8 @@ public partial class Fluid2D : Control
 
     //nb: h is usually referred to as smoothing radius
     Slider SmoothingRadius;
+
+    Random r;
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
@@ -30,7 +32,7 @@ public partial class Fluid2D : Control
 
         Densities = new float[ParticleCount];
         Pressures = new float[ParticleCount];
-        Random r = new Random();
+        r = new Random();
 
         int x = 0;
         int y = 0;
@@ -63,16 +65,24 @@ public partial class Fluid2D : Control
             {
                 if (i == j) continue;
                 float dst = Positions[i].DistanceTo(Positions[j]);
-                Vector2 dir = (Positions[i] - Positions[j]).Normalized();
-                float slope = CalculatePressureDerivative(Densities[i]) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value * scale);
-                Accelerations[i] += dir * (slope / Densities[i]);
+                if (dst > SmoothingRadius.Value) continue;
+                Vector2 dir = dst > 0 ? (Positions[i] - Positions[j]).Normalized() : new Vector2((float)r.NextDouble() * 2 - 1, (float)r.NextDouble() * 2 - 1).Normalized();
+                dst = dst == 0 ? 1 : dst;
+                //float slope = CalculatePressureDerivative(Densities[i]) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value * scale);
+                float slope = CalculatePressureDerivative(Densities[i]);
+                Accelerations[i] += dir * slope;
             }
         }
 
+        UpdateParticle((float)delta);
+    }
+
+    void UpdateParticle(float delta)
+    {
         for (int i = 0; i < ParticleCount; i++)
         {
-            Velocities[i] += Accelerations[i] * (float)delta;
-            Positions[i] += Velocities[i] * (float)delta;
+            Velocities[i] += Accelerations[i] * delta;
+            Positions[i] += Velocities[i] * delta;
 
             if (Positions[i].X <= 0)
             {
@@ -114,9 +124,9 @@ public partial class Fluid2D : Control
     //r is usually denoted as distance
     static float WeightedDensityKernel(float distance, float h)
     {
+        if (distance <= 0 && distance > h) return 0;
         float h2 = h * h;
         float r2 = distance * distance;
-        if (distance <= 0 && distance > h) return 0;
 
         return (4 / (MathF.PI * MathF.Pow(h, 8))) * Mathf.Pow(h2 - r2, 3);
     }
@@ -136,7 +146,7 @@ public partial class Fluid2D : Control
             for (int j = 0; j < ParticleCount; j++)
             {
                 if (i == j) { continue; }
-                Densities[i] += WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), (float)SmoothingRadius.Value * scale);
+                Densities[i] += WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), (float)SmoothingRadius.Value);
             }
         }
     }
