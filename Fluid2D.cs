@@ -6,26 +6,29 @@ public partial class Fluid2D : Control
 {
     int particleSize = 4;
     float restDensity = 0.003f;
-    float stiffness = 2;
-    float gamma = 7;
+    float stiffness = 1f;
+    float gamma = 7; // This number is pretty much a magic number. I don't know how it affects the pressure formula.
     float g = 1;
     [Export] int ParticleCount = 100;
     [Export] Vector2[] Positions;
-    Vector2[] Velocities;
-    Vector2[] Accelerations;
-    float[] Densities;
+    [Export] Vector2[] Velocities;
+    [Export] Vector2[] Accelerations;
+    [Export] float[] Densities;
     float[] Pressures;
     float mass = 1.0f;
     //scale is important to make the values not ridiculous
     float scale = 10;
 
     //nb: h is usually referred to as smoothing radius
-    Slider SmoothingRadius;
+    float SmoothingRadius = 8;
 
     Random r;
     // Called when the node enters the scene tree for the first time.
     public override void _Ready()
     {
+        //the scale affects the smoothing radius
+        SmoothingRadius *= scale;
+
         Positions = new Vector2[ParticleCount];
         Velocities = new Vector2[ParticleCount];
         Accelerations = new Vector2[ParticleCount];
@@ -49,8 +52,12 @@ public partial class Fluid2D : Control
             }
         }
 
-        SmoothingRadius = GetNode<Slider>("SmoothingRadius");
+        //CalculateDensity();
+        //Sampling();
 
+        //CalculateDensity();
+        //CalculatePressure();
+        //ComputeForces();
     }
 
     // Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -58,23 +65,32 @@ public partial class Fluid2D : Control
     {
         QueueRedraw();
         CalculateDensity();
+        CalculatePressure();
+        ComputeForces();
+
+        UpdateParticle((float)delta);
+    }
+
+    void ComputeForces()
+    {
         for (int i = 0; i < ParticleCount; i++)
         {
+            //Accelerations[i] = Vector2.Down * 98.1f;
             Accelerations[i] = Vector2.Zero;
             for (int j = 0; j < ParticleCount; j++)
             {
                 if (i == j) continue;
-                float dst = Positions[i].DistanceTo(Positions[j]);
-                if (dst > SmoothingRadius.Value) continue;
-                Vector2 dir = dst > 0 ? (Positions[i] - Positions[j]).Normalized() : new Vector2((float)r.NextDouble() * 2 - 1, (float)r.NextDouble() * 2 - 1).Normalized();
-                dst = dst == 0 ? 1 : dst;
-                //float slope = CalculatePressureDerivative(Densities[i]) * WeightedDensityDerivative(dst, (float)SmoothingRadius.Value * scale);
-                float slope = CalculatePressureDerivative(Densities[i]);
-                Accelerations[i] += dir * slope;
+                var rij = Positions[i] - Positions[j];
+
+                if(rij.Length() > 0)
+                {
+                    var term = mass * ((Pressures[i] + Pressures[j]) / (2 * Densities[j]));
+                    var gradient = SpikeyGradient(rij, SmoothingRadius);
+                    Accelerations[i] -= gradient * term;
+                    //Debug.Print($"{i}->{j}: {term}, {gradient}, {Accelerations[i]}");
+                }
             }
         }
-
-        UpdateParticle((float)delta);
     }
 
     void UpdateParticle(float delta)
@@ -124,11 +140,16 @@ public partial class Fluid2D : Control
     //r is usually denoted as distance
     static float WeightedDensityKernel(float distance, float h)
     {
-        if (distance <= 0 && distance > h) return 0;
-        float h2 = h * h;
-        float r2 = distance * distance;
+        if (distance >= 0 && distance < h)
+        {
+            float h2 = h * h;
+            float r2 = distance * distance;
 
-        return (4 / (MathF.PI * MathF.Pow(h, 8))) * Mathf.Pow(h2 - r2, 3);
+            return (4 / (MathF.PI * MathF.Pow(h, 8))) * Mathf.Pow(h2 - r2, 3);
+        } else
+        {
+            return 0;
+        }
     }
 
     //I have no clue why this is the answer, just roll with it
@@ -146,7 +167,7 @@ public partial class Fluid2D : Control
             for (int j = 0; j < ParticleCount; j++)
             {
                 if (i == j) { continue; }
-                Densities[i] += WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), (float)SmoothingRadius.Value);
+                Densities[i] += WeightedDensityKernel(Positions[i].DistanceTo(Positions[j]), SmoothingRadius);
             }
         }
     }
@@ -163,6 +184,22 @@ public partial class Fluid2D : Control
     //Did this myself heh >:3
     float CalculatePressureDerivative(float density)
     {
+        if (density < float.Epsilon) return 0;
         return (gamma * stiffness / gamma) * Mathf.Pow(density / restDensity, gamma - 1);
+    }
+
+    //spikey gradient from https://www.youtube.com/watch?v=7wikWMujUu4
+    static Vector2 SpikeyGradient(Vector2 rij, float h)
+    {
+        var r = rij.Length();
+        if(r > float.Epsilon && r < h)
+        {
+            rij = rij.Normalized();
+            var factor = -(30/(MathF.PI * MathF.Pow(h, 5))) * MathF.Pow(h - r, 2);
+            return rij * factor;
+        } else
+        {
+            return Vector2.Zero;
+        }
     }
 }
